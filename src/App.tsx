@@ -375,6 +375,12 @@ function ScenarioSummary({
           <p style={{ marginBottom: "1rem", fontWeight: "600" }}>
             Comparison against standard mortgage (Scenario 1):
           </p>
+          <p
+            style={{ marginBottom: "1rem", fontSize: "0.9rem", color: "#aaa" }}
+          >
+            Note: Standard mortgage means no lump sum payments or regular extra
+            payments—just the base monthly P&I payment.
+          </p>
 
           {/* Scenario 3 vs Scenario 1 */}
           <p>
