@@ -99,6 +99,17 @@ function ScenarioSummary({
   const totalMonthlyPayment = initialMonthlyPayment + inputs.extraPayment;
   const hasLumpSumAtStart = inputs.lumpSumAtStart > 0;
 
+  // Calculate payment difference between Scenario 4 and Scenario 2
+  const scenario4TotalPayment = refiWithExtraAfter.refiMonthlyPayment
+    ? refiWithExtraAfter.refiMonthlyPayment + inputs.extraPaymentAfterRefi
+    : 0;
+  const scenario2TotalPayment = initialMonthlyPayment + inputs.extraPayment;
+  const paymentDiffScenario4Vs2 = scenario4TotalPayment - scenario2TotalPayment;
+
+  // Calculate payment difference between Scenario 4 and Scenario 1
+  const scenario1TotalPayment = initialMonthlyPayment;
+  const paymentDiffScenario4Vs1 = scenario4TotalPayment - scenario1TotalPayment;
+
   return (
     <div style={{ lineHeight: "1.6" }}>
       <p>
@@ -479,6 +490,50 @@ function ScenarioSummary({
               off.
             </p>
           )}
+
+          {/* Keep in mind section */}
+          <p style={{ marginTop: "1rem", fontStyle: "italic" }}>
+            Keep in mind that if you{" "}
+            {paymentDiffScenario4Vs2 > 0 ? (
+              <>
+                decrease your extra payment by{" "}
+                <strong style={{ color: "inherit" }}>
+                  {formatCurrency(paymentDiffScenario4Vs2)}
+                </strong>
+              </>
+            ) : paymentDiffScenario4Vs2 < 0 ? (
+              <>
+                increase your extra payment by{" "}
+                <strong style={{ color: "inherit" }}>
+                  {formatCurrency(Math.abs(paymentDiffScenario4Vs2))}
+                </strong>
+              </>
+            ) : (
+              <>keep your extra payment the same</>
+            )}{" "}
+            then your total payment in Scenario 4 (refi with extra payments)
+            will be the same as total monthly payment as Scenario 2 (no refi).
+            And if you{" "}
+            {paymentDiffScenario4Vs1 > 0 ? (
+              <>
+                decrease your extra payment by{" "}
+                <strong style={{ color: "inherit" }}>
+                  {formatCurrency(paymentDiffScenario4Vs1)}
+                </strong>
+              </>
+            ) : paymentDiffScenario4Vs1 < 0 ? (
+              <>
+                increase your extra payment by{" "}
+                <strong style={{ color: "inherit" }}>
+                  {formatCurrency(Math.abs(paymentDiffScenario4Vs1))}
+                </strong>
+              </>
+            ) : (
+              <>keep your extra payment the same</>
+            )}{" "}
+            your total payment will be the same as Scenario 1 (standard
+            mortgage).
+          </p>
         </div>
       )}
     </div>
