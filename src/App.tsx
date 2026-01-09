@@ -60,11 +60,11 @@ const STORAGE_KEY = 'mortgageCalculatorInputs';
 const defaultInputs: CalculatorInputs = {
   loanAmount: 500000,
   interestRate: 6,
-  loanTermYears: 30,
+  loanTermMonths: 360,
   extraPayment: 1000,
   lumpSumAtStart: 0,
-  refiAfterYears: 5,
-  refiTermYears: 12.5,
+  refiAfterMonths: 60,
+  refiTermMonths: 150,
   refiRate: 6,
   lumpSumAfterRefi: 0,
 };
@@ -138,12 +138,13 @@ function App() {
           </div>
           
           <div className="input-group">
-            <label htmlFor="loanTermYears">Loan Term (years)</label>
+            <label htmlFor="loanTermMonths">Loan Term (months)</label>
             <input
-              id="loanTermYears"
+              id="loanTermMonths"
               type="number"
-              value={inputs.loanTermYears}
-              onChange={handleInputChange('loanTermYears')}
+              value={inputs.loanTermMonths}
+              onChange={handleInputChange('loanTermMonths')}
+              step="1"
             />
           </div>
           
@@ -173,24 +174,24 @@ function App() {
         <h2>Refinance Parameters</h2>
         <div className="input-grid">
           <div className="input-group">
-            <label htmlFor="refiAfterYears">Refi After (years)</label>
+            <label htmlFor="refiAfterMonths">Refi After (months)</label>
             <input
-              id="refiAfterYears"
+              id="refiAfterMonths"
               type="number"
-              value={inputs.refiAfterYears}
-              onChange={handleInputChange('refiAfterYears')}
-              step="0.5"
+              value={inputs.refiAfterMonths}
+              onChange={handleInputChange('refiAfterMonths')}
+              step="1"
             />
           </div>
           
           <div className="input-group">
-            <label htmlFor="refiTermYears">New Loan Term (years)</label>
+            <label htmlFor="refiTermMonths">New Loan Term (months)</label>
             <input
-              id="refiTermYears"
+              id="refiTermMonths"
               type="number"
-              value={inputs.refiTermYears}
-              onChange={handleInputChange('refiTermYears')}
-              step="0.5"
+              value={inputs.refiTermMonths}
+              onChange={handleInputChange('refiTermMonths')}
+              step="1"
             />
           </div>
           
@@ -219,7 +220,7 @@ function App() {
       </div>
       
       <div className="results-section">
-        <h2>=== Mortgage Scenarios ({inputs.refiTermYears}y ReFi) ===</h2>
+        <h2>=== Mortgage Scenarios ({inputs.refiTermMonths}m ReFi) ===</h2>
         
         <div className="scenarios">
           {scenarios.map((scenario: ScenarioResult, index: number) => (
