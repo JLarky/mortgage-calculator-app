@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   calculateAllScenarios,
   formatCurrency,
@@ -55,18 +55,49 @@ function ScenarioCard({ scenario, index }: { scenario: ScenarioResult; index: nu
   );
 }
 
+const STORAGE_KEY = 'mortgageCalculatorInputs';
+
+const defaultInputs: CalculatorInputs = {
+  loanAmount: 500000,
+  interestRate: 6,
+  loanTermYears: 30,
+  extraPayment: 1000,
+  lumpSumAtStart: 0,
+  refiAfterYears: 5,
+  refiTermYears: 12.5,
+  refiRate: 6,
+  lumpSumAfterRefi: 0,
+};
+
+function loadInputsFromStorage(): CalculatorInputs {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Validate and merge with defaults to handle missing fields
+      return { ...defaultInputs, ...parsed };
+    }
+  } catch (error) {
+    console.error('Failed to load inputs from localStorage:', error);
+  }
+  return defaultInputs;
+}
+
+function saveInputsToStorage(inputs: CalculatorInputs): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(inputs));
+  } catch (error) {
+    console.error('Failed to save inputs to localStorage:', error);
+  }
+}
+
 function App() {
-  const [inputs, setInputs] = useState<CalculatorInputs>({
-    loanAmount: 500000,
-    interestRate: 6,
-    loanTermYears: 30,
-    extraPayment: 1000,
-    lumpSumAtStart: 0,
-    refiAfterYears: 5,
-    refiTermYears: 12.5,
-    refiRate: 6,
-    lumpSumAfterRefi: 0,
-  });
+  const [inputs, setInputs] = useState<CalculatorInputs>(() => loadInputsFromStorage());
+
+  // Save to localStorage whenever inputs change
+  useEffect(() => {
+    saveInputsToStorage(inputs);
+  }, [inputs]);
 
   const scenarios = useMemo(() => calculateAllScenarios(inputs), [inputs]);
 

@@ -57,7 +57,7 @@ export function simulateMortgage(
   
   if (balance <= 0) {
     return {
-      totalPaid: Math.round(principal),
+      totalPaid: Math.round(principal * 100) / 100,
       durationMonths: 0,
       monthlyPayment: 0,
     };
@@ -77,7 +77,7 @@ export function simulateMortgage(
   }
   
   return {
-    totalPaid: Math.round(totalPaid),
+    totalPaid: Math.round(totalPaid * 100) / 100,
     durationMonths: months,
     monthlyPayment: baseMonthlyPayment,
   };
@@ -104,7 +104,7 @@ export function simulateMortgageWithRefi(
   
   if (balance <= 0) {
     return {
-      totalPaid: Math.round(principal),
+      totalPaid: Math.round(principal * 100) / 100,
       durationMonths: 0,
       monthlyPayment: 0,
     };
@@ -126,7 +126,7 @@ export function simulateMortgageWithRefi(
   
   if (balance <= 0.01) {
     return {
-      totalPaid: Math.round(totalPaid),
+      totalPaid: Math.round(totalPaid * 100) / 100,
       durationMonths: months,
       monthlyPayment: baseMonthlyPayment,
     };
@@ -138,7 +138,7 @@ export function simulateMortgageWithRefi(
   
   if (balance <= 0.01) {
     return {
-      totalPaid: Math.round(totalPaid),
+      totalPaid: Math.round(totalPaid * 100) / 100,
       durationMonths: months,
       monthlyPayment: baseMonthlyPayment,
     };
@@ -160,7 +160,7 @@ export function simulateMortgageWithRefi(
   }
   
   return {
-    totalPaid: Math.round(totalPaid),
+    totalPaid: Math.round(totalPaid * 100) / 100,
     durationMonths: months,
     monthlyPayment: baseMonthlyPayment,
     refiMonthlyPayment: refiMonthlyPayment,
@@ -177,7 +177,8 @@ export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(amount);
 }
 
