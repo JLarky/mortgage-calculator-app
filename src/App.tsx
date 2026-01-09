@@ -15,76 +15,183 @@ function ScenarioSummary({
   scenarios: ScenarioResult[];
   inputs: CalculatorInputs;
 }) {
+  const standard = scenarios[0];
   const extraNoRefi = scenarios[1];
   const refiNoExtraAfter = scenarios[2];
   const refiWithExtraAfter = scenarios[3];
 
+  // Find the best scenario (lowest total paid)
+  const bestScenario = scenarios.reduce((best, current) =>
+    current.totalPaid < best.totalPaid ? current : best
+  );
+  const bestIndex = scenarios.findIndex((s) => s === bestScenario);
+
   const years = Math.floor(inputs.loanTermMonths / 12);
   const refiYears = Math.floor(inputs.refiTermMonths / 12);
 
+  // Calculate differences
+  const refiNoExtraDiff = refiNoExtraAfter.totalPaid - extraNoRefi.totalPaid;
+  const refiWithExtraDiff =
+    refiWithExtraAfter.totalPaid - extraNoRefi.totalPaid;
+  const durationDiffNoExtra =
+    refiNoExtraAfter.durationMonths - extraNoRefi.durationMonths;
+  const durationDiffWithExtra =
+    refiWithExtraAfter.durationMonths - extraNoRefi.durationMonths;
+
+  // Check if refi rate is better
+  const refiRateBetter = inputs.refiRate < inputs.interestRate;
+  const refiRateWorse = inputs.refiRate > inputs.interestRate;
+
+  // Check if there are extra payments
+  const hasExtraPayments = inputs.extraPayment > 0;
+  const hasExtraAfterRefi = inputs.extraPaymentAfterRefi > 0;
+
+  // Check if differences are significant (more than $1000)
+  const isSignificantDiff = (diff: number) => Math.abs(diff) > 1000;
+
   return (
     <div style={{ lineHeight: "1.6" }}>
-      <p>
-        If you have a {years}-year loan of {formatCurrency(inputs.loanAmount)}{" "}
-        at {inputs.interestRate}% and plan to pay{" "}
-        {formatCurrency(inputs.extraPayment)} extra each month, here's how
-        refinancing looks:
-      </p>
+      {hasExtraPayments ? (
+        <p>
+          If you have a {years}-year loan of {formatCurrency(inputs.loanAmount)}{" "}
+          at {inputs.interestRate}% and plan to pay{" "}
+          {formatCurrency(inputs.extraPayment)} extra each month, here's how
+          refinancing looks:
+        </p>
+      ) : (
+        <p>
+          If you have a {years}-year loan of {formatCurrency(inputs.loanAmount)}{" "}
+          at {inputs.interestRate}%, here's how refinancing looks:
+        </p>
+      )}
 
-      <p>
-        <strong>If you refinance after {inputs.refiAfterMonths} months</strong>{" "}
-        to a {refiYears}-year term at {inputs.refiRate}% and{" "}
-        <strong>stop the extra payments</strong> (Scenario 3): It will cost you{" "}
-        {formatCurrency(refiNoExtraAfter.totalPaid)} total, where you're paying{" "}
-        {formatCurrency(refiNoExtraAfter.totalInterest)} in interest. Your total
-        monthly payment drops to{" "}
-        {formatCurrency(refiNoExtraAfter.monthlyPayment)}, but you'll be paying
-        for {formatDuration(refiNoExtraAfter.durationMonths)} instead of{" "}
-        {formatDuration(extraNoRefi.durationMonths)}. Compared to staying
-        aggressive without refi, you'd pay about{" "}
-        {formatCurrency(refiNoExtraAfter.totalPaid - extraNoRefi.totalPaid)}{" "}
-        more total and take{" "}
-        {formatDuration(
-          refiNoExtraAfter.durationMonths - extraNoRefi.durationMonths
-        )}{" "}
-        longer to pay off.
-      </p>
+      {/* Scenario 3 Analysis */}
+      {hasExtraPayments ? (
+        <p>
+          <strong>
+            If you refinance after {inputs.refiAfterMonths} months
+          </strong>{" "}
+          to a {refiYears}-year term at {inputs.refiRate}% and{" "}
+          <strong>stop the extra payments</strong> (Scenario 3): It will cost
+          you {formatCurrency(refiNoExtraAfter.totalPaid)} total, where you're
+          paying {formatCurrency(refiNoExtraAfter.totalInterest)} in interest.
+          Your total monthly payment drops to{" "}
+          {formatCurrency(refiNoExtraAfter.monthlyPayment)}, but you'll be
+          paying for {formatDuration(refiNoExtraAfter.durationMonths)} instead
+          of {formatDuration(extraNoRefi.durationMonths)}.
+          {isSignificantDiff(refiNoExtraDiff) ? (
+            <>
+              {" "}
+              Compared to staying aggressive without refi, you'd pay about{" "}
+              {formatCurrency(refiNoExtraDiff)} more total and take{" "}
+              {formatDuration(durationDiffNoExtra)} longer to pay off.
+            </>
+          ) : (
+            " The cost difference is minimal, but you'll take significantly longer to pay off."
+          )}
+        </p>
+      ) : (
+        <p>
+          <strong>
+            If you refinance after {inputs.refiAfterMonths} months
+          </strong>{" "}
+          to a {refiYears}-year term at {inputs.refiRate}% (Scenario 3): It will
+          cost you {formatCurrency(refiNoExtraAfter.totalPaid)} total, where
+          you're paying {formatCurrency(refiNoExtraAfter.totalInterest)} in
+          interest. Your monthly payment is{" "}
+          {formatCurrency(refiNoExtraAfter.monthlyPayment)}, and you'll be
+          paying for {formatDuration(refiNoExtraAfter.durationMonths)}.
+          {refiRateBetter
+            ? " The lower rate helps reduce your interest costs."
+            : refiRateWorse
+            ? " Note that your rate is actually higher than your original rate."
+            : " The rate is similar to your original rate."}
+        </p>
+      )}
 
-      <p>
-        <strong>
-          If you refinance and keep paying{" "}
-          {formatCurrency(inputs.extraPaymentAfterRefi)} extra per month
-        </strong>{" "}
-        (Scenario 4): It will cost you{" "}
-        {formatCurrency(refiWithExtraAfter.totalPaid)} total, where you're
-        paying {formatCurrency(refiWithExtraAfter.totalInterest)} in interest.
-        Your total monthly payment is{" "}
-        {formatCurrency(
-          refiWithExtraAfter.refiMonthlyPayment! + inputs.extraPaymentAfterRefi
-        )}{" "}
-        ({formatCurrency(refiWithExtraAfter.refiMonthlyPayment!)} P&I +{" "}
-        {formatCurrency(inputs.extraPaymentAfterRefi)} extra). Compared to
-        Scenario 2, you pay about{" "}
-        {formatCurrency(refiWithExtraAfter.totalPaid - extraNoRefi.totalPaid)}{" "}
-        more total and take{" "}
-        {formatDuration(
-          Math.abs(
-            refiWithExtraAfter.durationMonths - extraNoRefi.durationMonths
-          )
-        )}{" "}
-        {refiWithExtraAfter.durationMonths > extraNoRefi.durationMonths
-          ? "longer"
-          : "less"}{" "}
-        to pay off.
-      </p>
+      {/* Scenario 4 Analysis */}
+      {hasExtraAfterRefi ? (
+        <p>
+          <strong>
+            If you refinance and keep paying{" "}
+            {formatCurrency(inputs.extraPaymentAfterRefi)} extra per month
+          </strong>{" "}
+          (Scenario 4): It will cost you{" "}
+          {formatCurrency(refiWithExtraAfter.totalPaid)} total, where you're
+          paying {formatCurrency(refiWithExtraAfter.totalInterest)} in interest.
+          Your total monthly payment is{" "}
+          {formatCurrency(
+            refiWithExtraAfter.refiMonthlyPayment! +
+              inputs.extraPaymentAfterRefi
+          )}{" "}
+          ({formatCurrency(refiWithExtraAfter.refiMonthlyPayment!)} P&I +{" "}
+          {formatCurrency(inputs.extraPaymentAfterRefi)} extra).
+          {hasExtraPayments ? (
+            <>
+              {" "}
+              Compared to Scenario 2,{" "}
+              {refiWithExtraDiff > 0 ? (
+                <>
+                  it costs about {formatCurrency(refiWithExtraDiff)} more total
+                </>
+              ) : (
+                <>
+                  you save about {formatCurrency(Math.abs(refiWithExtraDiff))}{" "}
+                  total
+                </>
+              )}{" "}
+              and take {formatDuration(Math.abs(durationDiffWithExtra))}{" "}
+              {durationDiffWithExtra > 0 ? "longer" : "less"} to pay off.
+            </>
+          ) : (
+            <>
+              {" "}
+              You'll pay off in{" "}
+              {formatDuration(refiWithExtraAfter.durationMonths)}.
+            </>
+          )}
+        </p>
+      ) : (
+        <p>
+          <strong>If you refinance and don't make extra payments</strong>{" "}
+          (Scenario 4): This is the same as Scenario 3 since you're not planning
+          to make extra payments after refinancing.
+        </p>
+      )}
 
+      {/* Bottom Line */}
       <p>
-        <strong>Bottom line:</strong> If you can keep paying extra after refi,
-        Scenario 4 gets you close to Scenario 2's total cost. If you want to
-        make total interest payment lower, consider taking refi with a shorter
-        term since it might also give you a better rate, but the key is keeping
-        those extra payments going after refi—stopping them costs significantly
-        more.
+        <strong>Bottom line:</strong>{" "}
+        {bestIndex === 1 ? (
+          <>
+            Scenario 2 (staying aggressive without refi) is your best option,
+            saving you{" "}
+            {formatCurrency(standard.totalPaid - bestScenario.totalPaid)}{" "}
+            compared to the standard mortgage. Refinancing doesn't help much
+            here unless you can get a significantly better rate or shorter term.
+          </>
+        ) : bestIndex === 3 ? (
+          <>
+            Scenario 4 (refi and keep paying extra) is your best option. The key
+            is keeping those extra payments going after refi—stopping them (like
+            in Scenario 3) costs significantly more.{" "}
+            {refiRateBetter &&
+              "The better rate you're getting also helps reduce your interest costs."}
+          </>
+        ) : bestIndex === 2 ? (
+          <>
+            Scenario 3 (refi without extra payments) works best for your
+            situation, though it takes longer to pay off. If you want to reduce
+            total interest further, consider a shorter refi term or continuing
+            extra payments after refi.
+          </>
+        ) : (
+          <>
+            The standard mortgage (Scenario 1) is actually your baseline.{" "}
+            {hasExtraPayments &&
+              "Making extra payments or refinancing can save you significant money."}
+          </>
+        )}
       </p>
     </div>
   );
