@@ -10,7 +10,8 @@ body {
 }
 
 .container {
-  max-width: 900px;
+  width: 1200px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 2rem;
 }
@@ -79,11 +80,13 @@ h2 {
   text-align: center;
   color: #ff6b9d;
   border: none;
+  font-variant-numeric: tabular-nums;
+  min-width: 100%;
 }
 
 .scenarios {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 1.5rem;
   margin-top: 1.5rem;
 }
@@ -139,6 +142,35 @@ h2 {
   color: #00d9ff;
 }
 
+.show-more-btn {
+  margin-top: 0.75rem;
+  padding: 0.4rem 0.8rem;
+  background: transparent;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #aaa;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.show-more-btn:hover {
+  border-color: #00d9ff;
+  color: #00d9ff;
+}
+
+.expanded-details {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(0, 217, 255, 0.05);
+  border-radius: 6px;
+  border-left: 2px solid #00d9ff;
+}
+
+.expanded-details .stat-label {
+  min-width: 180px;
+}
+
 .savings-summary {
   margin-top: 2rem;
   padding: 1rem;
@@ -157,12 +189,23 @@ h2 {
   font-size: 1.2rem;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 1248px) {
+  .container {
+    width: 100%;
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 800px) {
   .container {
     padding: 1rem;
   }
   
   .input-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .scenarios {
     grid-template-columns: 1fr;
   }
   

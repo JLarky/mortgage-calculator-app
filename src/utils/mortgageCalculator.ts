@@ -9,6 +9,7 @@ export interface MortgageResult {
   totalPaid: number;
   durationMonths: number;
   monthlyPayment: number;
+  refiMonthlyPayment?: number;
 }
 
 export interface ScenarioResult {
@@ -16,6 +17,8 @@ export interface ScenarioResult {
   totalPaid: number;
   durationMonths: number;
   description: string;
+  monthlyPayment: number;
+  refiMonthlyPayment?: number;
 }
 
 // Calculate monthly payment for a mortgage (P&I only)
@@ -43,13 +46,24 @@ export function simulateMortgage(
   principal: number,
   annualRate: number,
   termYears: number,
-  extraMonthlyPayment: number = 0
+  extraMonthlyPayment: number = 0,
+  lumpSumAtStart: number = 0
 ): MortgageResult {
   const monthlyRate = annualRate / 100 / 12;
-  const baseMonthlyPayment = calculateMonthlyPayment(principal, annualRate, termYears);
   
-  let balance = principal;
-  let totalPaid = 0;
+  // Apply lump sum at start
+  let balance = principal - lumpSumAtStart;
+  let totalPaid = lumpSumAtStart;
+  
+  if (balance <= 0) {
+    return {
+      totalPaid: Math.round(principal),
+      durationMonths: 0,
+      monthlyPayment: 0,
+    };
+  }
+  
+  const baseMonthlyPayment = calculateMonthlyPayment(principal, annualRate, termYears);
   let months = 0;
   
   while (balance > 0.01 && months < termYears * 12) {
@@ -75,16 +89,28 @@ export function simulateMortgageWithRefi(
   annualRate: number,
   termYears: number,
   extraMonthlyPayment: number,
+  lumpSumAtStart: number,
   refiAfterYears: number,
   refiTermYears: number,
   refiRate: number,
-  extraAfterRefi: number
+  extraAfterRefi: number,
+  lumpSumAfterRefi: number
 ): MortgageResult {
   const monthlyRate = annualRate / 100 / 12;
-  const baseMonthlyPayment = calculateMonthlyPayment(principal, annualRate, termYears);
   
-  let balance = principal;
-  let totalPaid = 0;
+  // Apply lump sum at start
+  let balance = principal - lumpSumAtStart;
+  let totalPaid = lumpSumAtStart;
+  
+  if (balance <= 0) {
+    return {
+      totalPaid: Math.round(principal),
+      durationMonths: 0,
+      monthlyPayment: 0,
+    };
+  }
+  
+  const baseMonthlyPayment = calculateMonthlyPayment(principal, annualRate, termYears);
   let months = 0;
   const refiAfterMonths = refiAfterYears * 12;
   
@@ -106,7 +132,18 @@ export function simulateMortgageWithRefi(
     };
   }
   
-  // Phase 2: After refinance
+  // Phase 2: After refinance - apply lump sum first
+  balance -= lumpSumAfterRefi;
+  totalPaid += lumpSumAfterRefi;
+  
+  if (balance <= 0.01) {
+    return {
+      totalPaid: Math.round(totalPaid),
+      durationMonths: months,
+      monthlyPayment: baseMonthlyPayment,
+    };
+  }
+  
   const refiMonthlyRate = refiRate / 100 / 12;
   const refiMonthlyPayment = calculateMonthlyPayment(balance, refiRate, refiTermYears);
   const maxRefiMonths = refiTermYears * 12;
@@ -126,6 +163,7 @@ export function simulateMortgageWithRefi(
     totalPaid: Math.round(totalPaid),
     durationMonths: months,
     monthlyPayment: baseMonthlyPayment,
+    refiMonthlyPayment: refiMonthlyPayment,
   };
 }
 
@@ -148,19 +186,21 @@ export interface CalculatorInputs {
   interestRate: number;
   loanTermYears: number;
   extraPayment: number;
+  lumpSumAtStart: number;
   refiAfterYears: number;
   refiTermYears: number;
   refiRate: number;
+  lumpSumAfterRefi: number;
 }
 
 export function calculateAllScenarios(inputs: CalculatorInputs): ScenarioResult[] {
-  const { loanAmount, interestRate, loanTermYears, extraPayment, refiAfterYears, refiTermYears, refiRate } = inputs;
+  const { loanAmount, interestRate, loanTermYears, extraPayment, lumpSumAtStart, refiAfterYears, refiTermYears, refiRate, lumpSumAfterRefi } = inputs;
   
   // Scenario 1: Standard mortgage
-  const standard = simulateMortgage(loanAmount, interestRate, loanTermYears, 0);
+  const standard = simulateMortgage(loanAmount, interestRate, loanTermYears, 0, 0);
   
-  // Scenario 2: Extra payment, no refi
-  const extraNoRefi = simulateMortgage(loanAmount, interestRate, loanTermYears, extraPayment);
+  // Scenario 2: Extra payment + lump sum, no refi
+  const extraNoRefi = simulateMortgage(loanAmount, interestRate, loanTermYears, extraPayment, lumpSumAtStart);
   
   // Scenario 3: Extra payment before refi, no extra after
   const refiNoExtraAfter = simulateMortgageWithRefi(
@@ -168,10 +208,12 @@ export function calculateAllScenarios(inputs: CalculatorInputs): ScenarioResult[
     interestRate,
     loanTermYears,
     extraPayment,
+    lumpSumAtStart,
     refiAfterYears,
     refiTermYears,
     refiRate,
-    0
+    0,
+    lumpSumAfterRefi
   );
   
   // Scenario 4: Extra payment before and after refi
@@ -180,11 +222,17 @@ export function calculateAllScenarios(inputs: CalculatorInputs): ScenarioResult[
     interestRate,
     loanTermYears,
     extraPayment,
+    lumpSumAtStart,
     refiAfterYears,
     refiTermYears,
     refiRate,
-    extraPayment
+    extraPayment,
+    lumpSumAfterRefi
   );
+  
+  // Build description for lump sums
+  const lumpStartDesc = lumpSumAtStart > 0 ? ` + ${formatCurrency(lumpSumAtStart)} upfront` : '';
+  const lumpRefiDesc = lumpSumAfterRefi > 0 ? ` + ${formatCurrency(lumpSumAfterRefi)} at refi` : '';
   
   return [
     {
@@ -192,24 +240,30 @@ export function calculateAllScenarios(inputs: CalculatorInputs): ScenarioResult[
       totalPaid: standard.totalPaid,
       durationMonths: standard.durationMonths,
       description: `No extra payments, full ${loanTermYears}-year term`,
+      monthlyPayment: standard.monthlyPayment,
     },
     {
-      name: `+${formatCurrency(extraPayment)} extra monthly (no refi)`,
+      name: `+${formatCurrency(extraPayment)} extra monthly${lumpStartDesc} (no refi)`,
       totalPaid: extraNoRefi.totalPaid,
       durationMonths: extraNoRefi.durationMonths,
       description: `Extra ${formatCurrency(extraPayment)} towards principal each month`,
+      monthlyPayment: extraNoRefi.monthlyPayment,
     },
     {
-      name: `+${formatCurrency(extraPayment)}, refi after ${refiAfterYears}y -> ${refiTermYears}y, no extra after refi`,
+      name: `+${formatCurrency(extraPayment)}${lumpStartDesc}, refi -> ${refiTermYears}y${lumpRefiDesc}, no extra after`,
       totalPaid: refiNoExtraAfter.totalPaid,
       durationMonths: refiNoExtraAfter.durationMonths,
       description: `Extra payments for ${refiAfterYears} years, then refi to ${refiTermYears}y at ${refiRate}%`,
+      monthlyPayment: refiNoExtraAfter.monthlyPayment,
+      refiMonthlyPayment: refiNoExtraAfter.refiMonthlyPayment,
     },
     {
-      name: `+${formatCurrency(extraPayment)}, refi after ${refiAfterYears}y -> ${refiTermYears}y, +${formatCurrency(extraPayment)} continues`,
+      name: `+${formatCurrency(extraPayment)}${lumpStartDesc}, refi -> ${refiTermYears}y${lumpRefiDesc}, +${formatCurrency(extraPayment)} continues`,
       totalPaid: refiWithExtraAfter.totalPaid,
       durationMonths: refiWithExtraAfter.durationMonths,
       description: `Extra payments continue after refinance`,
+      monthlyPayment: refiWithExtraAfter.monthlyPayment,
+      refiMonthlyPayment: refiWithExtraAfter.refiMonthlyPayment,
     },
   ];
 }

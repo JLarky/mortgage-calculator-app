@@ -8,15 +8,64 @@ import {
 } from './utils/mortgageCalculator';
 import './App.css';
 
+function ScenarioCard({ scenario, index }: { scenario: ScenarioResult; index: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const isRefiScenario = scenario.refiMonthlyPayment !== undefined;
+
+  return (
+    <div className="scenario-card">
+      <div className="scenario-number">{index + 1})</div>
+      <div className="scenario-content">
+        <h3>{scenario.name}:</h3>
+        <div className="scenario-stats">
+          <div className="stat">
+            <span className="stat-label">Total paid:</span>
+            <span className="stat-value">{formatCurrency(scenario.totalPaid)}</span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">Duration:</span>
+            <span className="stat-value duration">{formatDuration(scenario.durationMonths)}</span>
+          </div>
+        </div>
+        
+        <button 
+          className="show-more-btn"
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+        
+        {expanded && (
+          <div className="expanded-details">
+            {isRefiScenario ? (
+              <div className="stat">
+                <span className="stat-label">Monthly P&I after refi:</span>
+                <span className="stat-value">{formatCurrency(scenario.refiMonthlyPayment!)}</span>
+              </div>
+            ) : (
+              <div className="stat">
+                <span className="stat-label">Monthly P&I:</span>
+                <span className="stat-value">{formatCurrency(scenario.monthlyPayment)}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [inputs, setInputs] = useState<CalculatorInputs>({
     loanAmount: 500000,
     interestRate: 6,
     loanTermYears: 30,
     extraPayment: 1000,
+    lumpSumAtStart: 0,
     refiAfterYears: 5,
     refiTermYears: 12.5,
     refiRate: 6,
+    lumpSumAfterRefi: 0,
   });
 
   const scenarios = useMemo(() => calculateAllScenarios(inputs), [inputs]);
@@ -77,6 +126,17 @@ function App() {
               step="100"
             />
           </div>
+          
+          <div className="input-group">
+            <label htmlFor="lumpSumAtStart">Lump Sum at Start ($)</label>
+            <input
+              id="lumpSumAtStart"
+              type="number"
+              value={inputs.lumpSumAtStart}
+              onChange={handleInputChange('lumpSumAtStart')}
+              step="1000"
+            />
+          </div>
         </div>
         
         <h2>Refinance Parameters</h2>
@@ -113,6 +173,17 @@ function App() {
               step="0.125"
             />
           </div>
+          
+          <div className="input-group">
+            <label htmlFor="lumpSumAfterRefi">Lump Sum After Refi ($)</label>
+            <input
+              id="lumpSumAfterRefi"
+              type="number"
+              value={inputs.lumpSumAfterRefi}
+              onChange={handleInputChange('lumpSumAfterRefi')}
+              step="1000"
+            />
+          </div>
         </div>
       </div>
       
@@ -121,22 +192,7 @@ function App() {
         
         <div className="scenarios">
           {scenarios.map((scenario: ScenarioResult, index: number) => (
-            <div key={index} className="scenario-card">
-              <div className="scenario-number">{index + 1})</div>
-              <div className="scenario-content">
-                <h3>{scenario.name}:</h3>
-                <div className="scenario-stats">
-                  <div className="stat">
-                    <span className="stat-label">Total paid:</span>
-                    <span className="stat-value">{formatCurrency(scenario.totalPaid)}</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat-label">Duration:</span>
-                    <span className="stat-value duration">{formatDuration(scenario.durationMonths)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ScenarioCard key={index} scenario={scenario} index={index} />
           ))}
         </div>
         
