@@ -49,6 +49,26 @@ function ScenarioSummary({
   // Check if differences are significant (more than $1000)
   const isSignificantDiff = (diff: number) => Math.abs(diff) > 1000;
 
+  // Check if difference is trivial (less than 1% of total interest)
+  const isTrivialDiff = (diff: number, totalInterest: number) => {
+    if (totalInterest === 0) return false;
+    return Math.abs(diff) < totalInterest * 0.01;
+  };
+
+  // Helper to get color class for a difference
+  // diff: the difference amount (positive = costs more, negative = saves)
+  // totalInterest: total interest for context
+  // isGoodWhenNegative: true if negative diff is good (saves money), false if positive diff is good
+  const getDiffColor = (
+    diff: number,
+    totalInterest: number,
+    isGoodWhenNegative: boolean = true
+  ) => {
+    if (isTrivialDiff(Math.abs(diff), totalInterest)) return "";
+    const isGood = isGoodWhenNegative ? diff < 0 : diff > 0;
+    return isGood ? "summary-good" : "summary-bad";
+  };
+
   return (
     <div style={{ lineHeight: "1.6" }}>
       {hasExtraPayments ? (
@@ -83,8 +103,17 @@ function ScenarioSummary({
             <>
               {" "}
               Compared to staying aggressive without refi, you'd pay about{" "}
-              {formatCurrency(refiNoExtraDiff)} more total and take{" "}
-              {formatDuration(durationDiffNoExtra)} longer to pay off.
+              <span
+                className={getDiffColor(
+                  refiNoExtraDiff,
+                  refiNoExtraAfter.totalInterest,
+                  true
+                )}
+              >
+                {formatCurrency(refiNoExtraDiff)}
+              </span>{" "}
+              more total and take {formatDuration(durationDiffNoExtra)} longer
+              to pay off.
             </>
           ) : (
             " The cost difference is minimal, but you'll take significantly longer to pay off."
@@ -132,11 +161,30 @@ function ScenarioSummary({
               Compared to Scenario 2,{" "}
               {refiWithExtraDiff > 0 ? (
                 <>
-                  it costs about {formatCurrency(refiWithExtraDiff)} more total
+                  it costs about{" "}
+                  <span
+                    className={getDiffColor(
+                      refiWithExtraDiff,
+                      refiWithExtraAfter.totalInterest,
+                      true
+                    )}
+                  >
+                    {formatCurrency(refiWithExtraDiff)}
+                  </span>{" "}
+                  more total
                 </>
               ) : (
                 <>
-                  you save about {formatCurrency(Math.abs(refiWithExtraDiff))}{" "}
+                  you save about{" "}
+                  <span
+                    className={getDiffColor(
+                      refiWithExtraDiff,
+                      refiWithExtraAfter.totalInterest,
+                      true
+                    )}
+                  >
+                    {formatCurrency(Math.abs(refiWithExtraDiff))}
+                  </span>{" "}
                   total
                 </>
               )}{" "}
@@ -166,7 +214,15 @@ function ScenarioSummary({
           <>
             Scenario 2 (staying aggressive without refi) is your best option,
             saving you{" "}
-            {formatCurrency(standard.totalPaid - bestScenario.totalPaid)}{" "}
+            <span
+              className={getDiffColor(
+                -(standard.totalPaid - bestScenario.totalPaid),
+                standard.totalInterest,
+                true
+              )}
+            >
+              {formatCurrency(standard.totalPaid - bestScenario.totalPaid)}
+            </span>{" "}
             compared to the standard mortgage. Refinancing doesn't help much
             here unless you can get a significantly better rate or shorter term.
           </>
