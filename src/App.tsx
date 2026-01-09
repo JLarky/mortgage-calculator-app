@@ -1,14 +1,20 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from "react";
 import {
   calculateAllScenarios,
   formatCurrency,
   formatDuration,
   type CalculatorInputs,
   type ScenarioResult,
-} from './utils/mortgageCalculator';
-import './App.css';
+} from "./utils/mortgageCalculator";
+import "./App.css";
 
-function ScenarioCard({ scenario, index }: { scenario: ScenarioResult; index: number }) {
+function ScenarioCard({
+  scenario,
+  index,
+}: {
+  scenario: ScenarioResult;
+  index: number;
+}) {
   const [expanded, setExpanded] = useState(false);
   const isRefiScenario = scenario.refiMonthlyPayment !== undefined;
 
@@ -20,32 +26,41 @@ function ScenarioCard({ scenario, index }: { scenario: ScenarioResult; index: nu
         <div className="scenario-stats">
           <div className="stat">
             <span className="stat-label">Total paid:</span>
-            <span className="stat-value">{formatCurrency(scenario.totalPaid)}</span>
+            <span className="stat-value">
+              {formatCurrency(scenario.totalPaid)} (
+              {formatCurrency(scenario.totalInterest)} int)
+            </span>
           </div>
           <div className="stat">
             <span className="stat-label">Duration:</span>
-            <span className="stat-value duration">{formatDuration(scenario.durationMonths)}</span>
+            <span className="stat-value duration">
+              {formatDuration(scenario.durationMonths)}
+            </span>
           </div>
         </div>
-        
-        <button 
+
+        <button
           className="show-more-btn"
           onClick={() => setExpanded(!expanded)}
         >
-          {expanded ? 'Show less' : 'Show more'}
+          {expanded ? "Show less" : "Show more"}
         </button>
-        
+
         {expanded && (
           <div className="expanded-details">
             {isRefiScenario ? (
               <div className="stat">
                 <span className="stat-label">Monthly P&I after refi:</span>
-                <span className="stat-value">{formatCurrency(scenario.refiMonthlyPayment!)}</span>
+                <span className="stat-value">
+                  {formatCurrency(scenario.refiMonthlyPayment!)}
+                </span>
               </div>
             ) : (
               <div className="stat">
                 <span className="stat-label">Monthly P&I:</span>
-                <span className="stat-value">{formatCurrency(scenario.monthlyPayment)}</span>
+                <span className="stat-value">
+                  {formatCurrency(scenario.monthlyPayment)}
+                </span>
               </div>
             )}
           </div>
@@ -55,8 +70,6 @@ function ScenarioCard({ scenario, index }: { scenario: ScenarioResult; index: nu
   );
 }
 
-const STORAGE_KEY = 'mortgageCalculatorInputs';
-
 const defaultInputs: CalculatorInputs = {
   loanAmount: 500000,
   interestRate: 6,
@@ -64,54 +77,96 @@ const defaultInputs: CalculatorInputs = {
   extraPayment: 1000,
   lumpSumAtStart: 0,
   refiAfterMonths: 60,
-  refiTermMonths: 150,
+  refiTermMonths: 360,
   refiRate: 6,
+  extraPaymentAfterRefi: 1000,
   lumpSumAfterRefi: 0,
 };
 
-function loadInputsFromStorage(): CalculatorInputs {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      // Validate and merge with defaults to handle missing fields
-      return { ...defaultInputs, ...parsed };
-    }
-  } catch (error) {
-    console.error('Failed to load inputs from localStorage:', error);
-  }
-  return defaultInputs;
+function loadInputsFromQueryString(): CalculatorInputs {
+  const params = new URLSearchParams(window.location.search);
+  const inputs: Partial<CalculatorInputs> = {};
+
+  // Parse each field from query string
+  const loanAmount = params.get("loanAmount");
+  if (loanAmount) inputs.loanAmount = parseFloat(loanAmount);
+
+  const interestRate = params.get("interestRate");
+  if (interestRate) inputs.interestRate = parseFloat(interestRate);
+
+  const loanTermMonths = params.get("loanTermMonths");
+  if (loanTermMonths) inputs.loanTermMonths = parseFloat(loanTermMonths);
+
+  const extraPayment = params.get("extraPayment");
+  if (extraPayment) inputs.extraPayment = parseFloat(extraPayment);
+
+  const lumpSumAtStart = params.get("lumpSumAtStart");
+  if (lumpSumAtStart) inputs.lumpSumAtStart = parseFloat(lumpSumAtStart);
+
+  const refiAfterMonths = params.get("refiAfterMonths");
+  if (refiAfterMonths) inputs.refiAfterMonths = parseFloat(refiAfterMonths);
+
+  const refiTermMonths = params.get("refiTermMonths");
+  if (refiTermMonths) inputs.refiTermMonths = parseFloat(refiTermMonths);
+
+  const refiRate = params.get("refiRate");
+  if (refiRate) inputs.refiRate = parseFloat(refiRate);
+
+  const extraPaymentAfterRefi = params.get("extraPaymentAfterRefi");
+  if (extraPaymentAfterRefi)
+    inputs.extraPaymentAfterRefi = parseFloat(extraPaymentAfterRefi);
+
+  const lumpSumAfterRefi = params.get("lumpSumAfterRefi");
+  if (lumpSumAfterRefi) inputs.lumpSumAfterRefi = parseFloat(lumpSumAfterRefi);
+
+  // Merge with defaults, only including valid parsed values
+  return { ...defaultInputs, ...inputs };
 }
 
-function saveInputsToStorage(inputs: CalculatorInputs): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(inputs));
-  } catch (error) {
-    console.error('Failed to save inputs to localStorage:', error);
-  }
+function updateQueryString(inputs: CalculatorInputs): void {
+  const params = new URLSearchParams();
+
+  // Store all values in query string for easy sharing
+  params.set("loanAmount", inputs.loanAmount.toString());
+  params.set("interestRate", inputs.interestRate.toString());
+  params.set("loanTermMonths", inputs.loanTermMonths.toString());
+  params.set("extraPayment", inputs.extraPayment.toString());
+  params.set("lumpSumAtStart", inputs.lumpSumAtStart.toString());
+  params.set("refiAfterMonths", inputs.refiAfterMonths.toString());
+  params.set("refiTermMonths", inputs.refiTermMonths.toString());
+  params.set("refiRate", inputs.refiRate.toString());
+  params.set("extraPaymentAfterRefi", inputs.extraPaymentAfterRefi.toString());
+  params.set("lumpSumAfterRefi", inputs.lumpSumAfterRefi.toString());
+
+  const newUrl =
+    window.location.pathname + `?${params.toString()}` + window.location.hash;
+
+  window.history.replaceState({}, "", newUrl);
 }
 
 function App() {
-  const [inputs, setInputs] = useState<CalculatorInputs>(() => loadInputsFromStorage());
+  const [inputs, setInputs] = useState<CalculatorInputs>(() =>
+    loadInputsFromQueryString()
+  );
 
-  // Save to localStorage whenever inputs change
+  // Update query string whenever inputs change
   useEffect(() => {
-    saveInputsToStorage(inputs);
+    updateQueryString(inputs);
   }, [inputs]);
 
   const scenarios = useMemo(() => calculateAllScenarios(inputs), [inputs]);
 
-  const handleInputChange = (field: keyof CalculatorInputs) => (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const value = parseFloat(e.target.value) || 0;
-    setInputs((prev) => ({ ...prev, [field]: value }));
-  };
+  const handleInputChange =
+    (field: keyof CalculatorInputs) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = parseFloat(e.target.value) || 0;
+      setInputs((prev) => ({ ...prev, [field]: value }));
+    };
 
   return (
     <div className="container">
       <h1>Mortgage Scenario Calculator</h1>
-      
+
       <div className="input-section">
         <h2>Loan Parameters</h2>
         <div className="input-grid">
@@ -121,56 +176,56 @@ function App() {
               id="loanAmount"
               type="number"
               value={inputs.loanAmount}
-              onChange={handleInputChange('loanAmount')}
+              onChange={handleInputChange("loanAmount")}
               step="10000"
             />
           </div>
-          
-          <div className="input-group">
-            <label htmlFor="interestRate">Interest Rate (%)</label>
-            <input
-              id="interestRate"
-              type="number"
-              value={inputs.interestRate}
-              onChange={handleInputChange('interestRate')}
-              step="0.125"
-            />
-          </div>
-          
+
           <div className="input-group">
             <label htmlFor="loanTermMonths">Loan Term (months)</label>
             <input
               id="loanTermMonths"
               type="number"
               value={inputs.loanTermMonths}
-              onChange={handleInputChange('loanTermMonths')}
+              onChange={handleInputChange("loanTermMonths")}
               step="1"
             />
           </div>
-          
+
+          <div className="input-group">
+            <label htmlFor="interestRate">Interest Rate (%)</label>
+            <input
+              id="interestRate"
+              type="number"
+              value={inputs.interestRate}
+              onChange={handleInputChange("interestRate")}
+              step="0.125"
+            />
+          </div>
+
           <div className="input-group">
             <label htmlFor="extraPayment">Extra Monthly Payment ($)</label>
             <input
               id="extraPayment"
               type="number"
               value={inputs.extraPayment}
-              onChange={handleInputChange('extraPayment')}
+              onChange={handleInputChange("extraPayment")}
               step="100"
             />
           </div>
-          
+
           <div className="input-group">
             <label htmlFor="lumpSumAtStart">Lump Sum at Start ($)</label>
             <input
               id="lumpSumAtStart"
               type="number"
               value={inputs.lumpSumAtStart}
-              onChange={handleInputChange('lumpSumAtStart')}
+              onChange={handleInputChange("lumpSumAtStart")}
               step="1000"
             />
           </div>
         </div>
-        
+
         <h2>Refinance Parameters</h2>
         <div className="input-grid">
           <div className="input-group">
@@ -179,64 +234,78 @@ function App() {
               id="refiAfterMonths"
               type="number"
               value={inputs.refiAfterMonths}
-              onChange={handleInputChange('refiAfterMonths')}
+              onChange={handleInputChange("refiAfterMonths")}
               step="1"
             />
           </div>
-          
+
           <div className="input-group">
             <label htmlFor="refiTermMonths">New Loan Term (months)</label>
             <input
               id="refiTermMonths"
               type="number"
               value={inputs.refiTermMonths}
-              onChange={handleInputChange('refiTermMonths')}
+              onChange={handleInputChange("refiTermMonths")}
               step="1"
             />
           </div>
-          
+
           <div className="input-group">
             <label htmlFor="refiRate">New Interest Rate (%)</label>
             <input
               id="refiRate"
               type="number"
               value={inputs.refiRate}
-              onChange={handleInputChange('refiRate')}
+              onChange={handleInputChange("refiRate")}
               step="0.125"
             />
           </div>
-          
+
+          <div className="input-group">
+            <label htmlFor="extraPaymentAfterRefi">
+              Extra Monthly Payment ($)
+            </label>
+            <input
+              id="extraPaymentAfterRefi"
+              type="number"
+              value={inputs.extraPaymentAfterRefi}
+              onChange={handleInputChange("extraPaymentAfterRefi")}
+              step="100"
+            />
+          </div>
+
           <div className="input-group">
             <label htmlFor="lumpSumAfterRefi">Lump Sum After Refi ($)</label>
             <input
               id="lumpSumAfterRefi"
               type="number"
               value={inputs.lumpSumAfterRefi}
-              onChange={handleInputChange('lumpSumAfterRefi')}
+              onChange={handleInputChange("lumpSumAfterRefi")}
               step="1000"
             />
           </div>
         </div>
       </div>
-      
+
       <div className="results-section">
         <h2>=== Mortgage Scenarios ({inputs.refiTermMonths}m ReFi) ===</h2>
-        
+
         <div className="scenarios">
           {scenarios.map((scenario: ScenarioResult, index: number) => (
             <ScenarioCard key={index} scenario={scenario} index={index} />
           ))}
         </div>
-        
+
         <div className="savings-summary">
           <h3>Potential Savings</h3>
           <p>
-            Best scenario saves{' '}
+            Best scenario saves{" "}
             <strong>
               {formatCurrency(
-                scenarios[0].totalPaid - Math.min(...scenarios.map((s) => s.totalPaid))
+                scenarios[0].totalPaid -
+                  Math.min(...scenarios.map((s) => s.totalPaid))
               )}
-            </strong>{' '}
+            </strong>{" "}
             compared to standard mortgage
           </p>
         </div>

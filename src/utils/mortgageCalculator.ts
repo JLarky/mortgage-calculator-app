@@ -7,6 +7,7 @@ export interface MortgageParams {
 
 export interface MortgageResult {
   totalPaid: number;
+  totalInterest: number;
   durationMonths: number;
   monthlyPayment: number;
   refiMonthlyPayment?: number;
@@ -15,6 +16,7 @@ export interface MortgageResult {
 export interface ScenarioResult {
   name: string;
   totalPaid: number;
+  totalInterest: number;
   durationMonths: number;
   description: string;
   monthlyPayment: number;
@@ -29,15 +31,15 @@ export function calculateMonthlyPayment(
 ): number {
   const monthlyRate = annualRate / 100 / 12;
   const numPayments = termMonths;
-  
+
   if (monthlyRate === 0) {
     return principal / numPayments;
   }
-  
+
   const payment =
     (principal * monthlyRate * Math.pow(1 + monthlyRate, numPayments)) /
     (Math.pow(1 + monthlyRate, numPayments) - 1);
-  
+
   return payment;
 }
 
@@ -50,34 +52,45 @@ export function simulateMortgage(
   lumpSumAtStart: number = 0
 ): MortgageResult {
   const monthlyRate = annualRate / 100 / 12;
-  
+
   // Apply lump sum at start
   let balance = principal - lumpSumAtStart;
   let totalPaid = lumpSumAtStart;
-  
+  let totalInterest = 0;
+
   if (balance <= 0) {
     return {
       totalPaid: Math.round(principal * 100) / 100,
+      totalInterest: 0,
       durationMonths: 0,
       monthlyPayment: 0,
     };
   }
-  
-  const baseMonthlyPayment = calculateMonthlyPayment(principal, annualRate, termMonths);
+
+  const baseMonthlyPayment = calculateMonthlyPayment(
+    principal,
+    annualRate,
+    termMonths
+  );
   let months = 0;
-  
+
   while (balance > 0.01 && months < termMonths) {
     months++;
     const interestPayment = balance * monthlyRate;
-    const actualPayment = Math.min(balance + interestPayment, baseMonthlyPayment + extraMonthlyPayment);
+    const actualPayment = Math.min(
+      balance + interestPayment,
+      baseMonthlyPayment + extraMonthlyPayment
+    );
     totalPaid += actualPayment;
-    balance -= (actualPayment - interestPayment);
-    
+    totalInterest += interestPayment;
+    balance -= actualPayment - interestPayment;
+
     if (balance < 0) balance = 0;
   }
-  
+
   return {
     totalPaid: Math.round(totalPaid * 100) / 100,
+    totalInterest: Math.round(totalInterest * 100) / 100,
     durationMonths: months,
     monthlyPayment: baseMonthlyPayment,
   };
@@ -97,68 +110,92 @@ export function simulateMortgageWithRefi(
   lumpSumAfterRefi: number
 ): MortgageResult {
   const monthlyRate = annualRate / 100 / 12;
-  
+
   // Apply lump sum at start
   let balance = principal - lumpSumAtStart;
   let totalPaid = lumpSumAtStart;
-  
+  let totalInterest = 0;
+
   if (balance <= 0) {
     return {
       totalPaid: Math.round(principal * 100) / 100,
+      totalInterest: 0,
       durationMonths: 0,
       monthlyPayment: 0,
     };
   }
-  
-  const baseMonthlyPayment = calculateMonthlyPayment(principal, annualRate, termMonths);
+
+  const baseMonthlyPayment = calculateMonthlyPayment(
+    principal,
+    annualRate,
+    termMonths
+  );
   let months = 0;
-  
+
   // Phase 1: Before refinance
   while (balance > 0.01 && months < refiAfterMonths) {
     months++;
     const interestPayment = balance * monthlyRate;
-    const actualPayment = Math.min(balance + interestPayment, baseMonthlyPayment + extraMonthlyPayment);
+    const actualPayment = Math.min(
+      balance + interestPayment,
+      baseMonthlyPayment + extraMonthlyPayment
+    );
     totalPaid += actualPayment;
-    balance -= (actualPayment - interestPayment);
+    totalInterest += interestPayment;
+    balance -= actualPayment - interestPayment;
     if (balance < 0) balance = 0;
   }
-  
+
   if (balance <= 0.01) {
     return {
       totalPaid: Math.round(totalPaid * 100) / 100,
+      totalInterest: Math.round(totalInterest * 100) / 100,
       durationMonths: months,
       monthlyPayment: baseMonthlyPayment,
     };
   }
-  
-  // Phase 2: After refinance - apply lump sum first
+
+  // Phase 2: After refinance
+  // Calculate monthly payment based on current balance (before lump sum)
+  const refiMonthlyRate = refiRate / 100 / 12;
+  const refiMonthlyPayment = calculateMonthlyPayment(
+    balance,
+    refiRate,
+    refiTermMonths
+  );
+
+  // Apply lump sum as extra payment (reduces balance immediately)
   balance -= lumpSumAfterRefi;
   totalPaid += lumpSumAfterRefi;
-  
+
   if (balance <= 0.01) {
     return {
       totalPaid: Math.round(totalPaid * 100) / 100,
+      totalInterest: Math.round(totalInterest * 100) / 100,
       durationMonths: months,
       monthlyPayment: baseMonthlyPayment,
     };
   }
-  
-  const refiMonthlyRate = refiRate / 100 / 12;
-  const refiMonthlyPayment = calculateMonthlyPayment(balance, refiRate, refiTermMonths);
+
   let refiMonths = 0;
-  
+
   while (balance > 0.01 && refiMonths < refiTermMonths) {
     months++;
     refiMonths++;
     const interestPayment = balance * refiMonthlyRate;
-    const actualPayment = Math.min(balance + interestPayment, refiMonthlyPayment + extraAfterRefi);
+    const actualPayment = Math.min(
+      balance + interestPayment,
+      refiMonthlyPayment + extraAfterRefi
+    );
     totalPaid += actualPayment;
-    balance -= (actualPayment - interestPayment);
+    totalInterest += interestPayment;
+    balance -= actualPayment - interestPayment;
     if (balance < 0) balance = 0;
   }
-  
+
   return {
     totalPaid: Math.round(totalPaid * 100) / 100,
+    totalInterest: Math.round(totalInterest * 100) / 100,
     durationMonths: months,
     monthlyPayment: baseMonthlyPayment,
     refiMonthlyPayment: refiMonthlyPayment,
@@ -172,9 +209,9 @@ export function formatDuration(months: number): string {
 }
 
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
@@ -189,18 +226,44 @@ export interface CalculatorInputs {
   refiAfterMonths: number;
   refiTermMonths: number;
   refiRate: number;
+  extraPaymentAfterRefi: number;
   lumpSumAfterRefi: number;
 }
 
-export function calculateAllScenarios(inputs: CalculatorInputs): ScenarioResult[] {
-  const { loanAmount, interestRate, loanTermMonths, extraPayment, lumpSumAtStart, refiAfterMonths, refiTermMonths, refiRate, lumpSumAfterRefi } = inputs;
-  
+export function calculateAllScenarios(
+  inputs: CalculatorInputs
+): ScenarioResult[] {
+  const {
+    loanAmount,
+    interestRate,
+    loanTermMonths,
+    extraPayment,
+    lumpSumAtStart,
+    refiAfterMonths,
+    refiTermMonths,
+    refiRate,
+    extraPaymentAfterRefi,
+    lumpSumAfterRefi,
+  } = inputs;
+
   // Scenario 1: Standard mortgage
-  const standard = simulateMortgage(loanAmount, interestRate, loanTermMonths, 0, 0);
-  
+  const standard = simulateMortgage(
+    loanAmount,
+    interestRate,
+    loanTermMonths,
+    0,
+    0
+  );
+
   // Scenario 2: Extra payment + lump sum, no refi
-  const extraNoRefi = simulateMortgage(loanAmount, interestRate, loanTermMonths, extraPayment, lumpSumAtStart);
-  
+  const extraNoRefi = simulateMortgage(
+    loanAmount,
+    interestRate,
+    loanTermMonths,
+    extraPayment,
+    lumpSumAtStart
+  );
+
   // Scenario 3: Extra payment before refi, no extra after
   const refiNoExtraAfter = simulateMortgageWithRefi(
     loanAmount,
@@ -212,9 +275,9 @@ export function calculateAllScenarios(inputs: CalculatorInputs): ScenarioResult[
     refiTermMonths,
     refiRate,
     0,
-    lumpSumAfterRefi
+    0
   );
-  
+
   // Scenario 4: Extra payment before and after refi
   const refiWithExtraAfter = simulateMortgageWithRefi(
     loanAmount,
@@ -225,40 +288,58 @@ export function calculateAllScenarios(inputs: CalculatorInputs): ScenarioResult[
     refiAfterMonths,
     refiTermMonths,
     refiRate,
-    extraPayment,
+    extraPaymentAfterRefi,
     lumpSumAfterRefi
   );
-  
+
   // Build description for lump sums
-  const lumpStartDesc = lumpSumAtStart > 0 ? ` + ${formatCurrency(lumpSumAtStart)} upfront` : '';
-  const lumpRefiDesc = lumpSumAfterRefi > 0 ? ` + ${formatCurrency(lumpSumAfterRefi)} at refi` : '';
-  
+  const lumpStartDesc =
+    lumpSumAtStart > 0 ? ` + ${formatCurrency(lumpSumAtStart)} upfront` : "";
+  const lumpRefiDesc =
+    lumpSumAfterRefi > 0
+      ? ` + ${formatCurrency(lumpSumAfterRefi)} at refi`
+      : "";
+
   return [
     {
       name: `Standard ${loanTermMonths}m`,
       totalPaid: standard.totalPaid,
+      totalInterest: standard.totalInterest,
       durationMonths: standard.durationMonths,
       description: `No extra payments, full ${loanTermMonths}-month term`,
       monthlyPayment: standard.monthlyPayment,
     },
     {
-      name: `+${formatCurrency(extraPayment)} extra monthly${lumpStartDesc} (no refi)`,
+      name: `+${formatCurrency(
+        extraPayment
+      )} extra monthly${lumpStartDesc} (no refi)`,
       totalPaid: extraNoRefi.totalPaid,
+      totalInterest: extraNoRefi.totalInterest,
       durationMonths: extraNoRefi.durationMonths,
-      description: `Extra ${formatCurrency(extraPayment)} towards principal each month`,
+      description: `Extra ${formatCurrency(
+        extraPayment
+      )} towards principal each month`,
       monthlyPayment: extraNoRefi.monthlyPayment,
     },
     {
-      name: `+${formatCurrency(extraPayment)}${lumpStartDesc}, refi -> ${refiTermMonths}m${lumpRefiDesc}, no extra after`,
+      name: `+${formatCurrency(
+        extraPayment
+      )}${lumpStartDesc}, refi -> ${refiTermMonths}m, no extra after`,
       totalPaid: refiNoExtraAfter.totalPaid,
+      totalInterest: refiNoExtraAfter.totalInterest,
       durationMonths: refiNoExtraAfter.durationMonths,
       description: `Extra payments for ${refiAfterMonths} months, then refi to ${refiTermMonths}m at ${refiRate}%`,
       monthlyPayment: refiNoExtraAfter.monthlyPayment,
       refiMonthlyPayment: refiNoExtraAfter.refiMonthlyPayment,
     },
     {
-      name: `+${formatCurrency(extraPayment)}${lumpStartDesc}, refi -> ${refiTermMonths}m${lumpRefiDesc}, +${formatCurrency(extraPayment)} continues`,
+      name: `+${formatCurrency(
+        extraPayment
+      )}${lumpStartDesc}, refi -> ${refiTermMonths}m${lumpRefiDesc}, +${formatCurrency(
+        extraPaymentAfterRefi
+      )} continues`,
       totalPaid: refiWithExtraAfter.totalPaid,
+      totalInterest: refiWithExtraAfter.totalInterest,
       durationMonths: refiWithExtraAfter.durationMonths,
       description: `Extra payments continue after refinance`,
       monthlyPayment: refiWithExtraAfter.monthlyPayment,
