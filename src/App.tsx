@@ -45,6 +45,8 @@ function ScenarioSummary({
   // Check if there are extra payments
   const hasExtraPayments = inputs.extraPayment > 0;
   const hasExtraAfterRefi = inputs.extraPaymentAfterRefi > 0;
+  const hasLumpSumAfterRefi = inputs.lumpSumAfterRefi > 0;
+  const isScenario4DifferentFrom3 = hasExtraAfterRefi || hasLumpSumAfterRefi;
 
   // Check if differences are significant (more than $1000)
   const isSignificantDiff = (diff: number) => Math.abs(diff) > 1000;
@@ -130,6 +132,22 @@ function ScenarioSummary({
           interest. Your monthly payment is{" "}
           {formatCurrency(refiNoExtraAfter.monthlyPayment)}, and you'll be
           paying for {formatDuration(refiNoExtraAfter.durationMonths)}.
+          {!hasExtraPayments && (
+            <>
+              {" "}
+              Compared to not refinancing (Scenario 2), you'll pay about{" "}
+              <span
+                className={getDiffColor(
+                  refiNoExtraDiff,
+                  refiNoExtraAfter.totalInterest,
+                  true
+                )}
+              >
+                {formatCurrency(refiNoExtraDiff)}
+              </span>{" "}
+              more total.
+            </>
+          )}
           {refiRateBetter
             ? " The lower rate helps reduce your interest costs."
             : refiRateWorse
@@ -139,22 +157,46 @@ function ScenarioSummary({
       )}
 
       {/* Scenario 4 Analysis */}
-      {hasExtraAfterRefi ? (
+      {isScenario4DifferentFrom3 ? (
         <p>
           <strong>
-            If you refinance and keep paying{" "}
-            {formatCurrency(inputs.extraPaymentAfterRefi)} extra per month
+            If you refinance
+            {hasExtraAfterRefi
+              ? ` and keep paying ${formatCurrency(
+                  inputs.extraPaymentAfterRefi
+                )} extra per month`
+              : ""}
+            {hasLumpSumAfterRefi
+              ? hasExtraAfterRefi
+                ? ` and pay a ${formatCurrency(
+                    inputs.lumpSumAfterRefi
+                  )} lump sum at refi`
+                : ` and pay a ${formatCurrency(
+                    inputs.lumpSumAfterRefi
+                  )} lump sum at refi`
+              : ""}
           </strong>{" "}
           (Scenario 4): It will cost you{" "}
           {formatCurrency(refiWithExtraAfter.totalPaid)} total, where you're
           paying {formatCurrency(refiWithExtraAfter.totalInterest)} in interest.
-          Your total monthly payment is{" "}
-          {formatCurrency(
-            refiWithExtraAfter.refiMonthlyPayment! +
-              inputs.extraPaymentAfterRefi
-          )}{" "}
-          ({formatCurrency(refiWithExtraAfter.refiMonthlyPayment!)} P&I +{" "}
-          {formatCurrency(inputs.extraPaymentAfterRefi)} extra).
+          {hasExtraAfterRefi ? (
+            <>
+              {" "}
+              Your total monthly payment is{" "}
+              {formatCurrency(
+                refiWithExtraAfter.refiMonthlyPayment! +
+                  inputs.extraPaymentAfterRefi
+              )}{" "}
+              ({formatCurrency(refiWithExtraAfter.refiMonthlyPayment!)} P&I +{" "}
+              {formatCurrency(inputs.extraPaymentAfterRefi)} extra).
+            </>
+          ) : (
+            <>
+              {" "}
+              Your monthly payment is{" "}
+              {formatCurrency(refiWithExtraAfter.refiMonthlyPayment!)}.
+            </>
+          )}
           {hasExtraPayments ? (
             <>
               {" "}
@@ -194,8 +236,38 @@ function ScenarioSummary({
           ) : (
             <>
               {" "}
-              You'll pay off in{" "}
-              {formatDuration(refiWithExtraAfter.durationMonths)}.
+              Compared to not refinancing (Scenario 2),{" "}
+              {refiWithExtraDiff > 0 ? (
+                <>
+                  you'll pay about{" "}
+                  <span
+                    className={getDiffColor(
+                      refiWithExtraDiff,
+                      refiWithExtraAfter.totalInterest,
+                      true
+                    )}
+                  >
+                    {formatCurrency(refiWithExtraDiff)}
+                  </span>{" "}
+                  more total
+                </>
+              ) : (
+                <>
+                  you'll save about{" "}
+                  <span
+                    className={getDiffColor(
+                      refiWithExtraDiff,
+                      refiWithExtraAfter.totalInterest,
+                      true
+                    )}
+                  >
+                    {formatCurrency(Math.abs(refiWithExtraDiff))}
+                  </span>{" "}
+                  total
+                </>
+              )}{" "}
+              and pay off in {formatDuration(refiWithExtraAfter.durationMonths)}
+              .
             </>
           )}
         </p>
