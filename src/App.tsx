@@ -16,6 +16,7 @@ function ScenarioSummary({
   scenarios: ScenarioResult[];
   inputs: CalculatorInputs;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const standard = scenarios[0];
   const extraNoRefi = scenarios[1];
   const refiNoExtraAfter = scenarios[2];
@@ -37,7 +38,7 @@ function ScenarioSummary({
     return `${months}-month`;
   };
 
-  // Calculate differences
+  // Calculate differences compared to Scenario 2 (no refi)
   const refiNoExtraDiff = refiNoExtraAfter.totalPaid - extraNoRefi.totalPaid;
   const refiWithExtraDiff =
     refiWithExtraAfter.totalPaid - extraNoRefi.totalPaid;
@@ -45,6 +46,16 @@ function ScenarioSummary({
     refiNoExtraAfter.durationMonths - extraNoRefi.durationMonths;
   const durationDiffWithExtra =
     refiWithExtraAfter.durationMonths - extraNoRefi.durationMonths;
+
+  // Calculate differences compared to Scenario 1 (standard)
+  const refiNoExtraDiffVsStandard =
+    refiNoExtraAfter.totalPaid - standard.totalPaid;
+  const refiWithExtraDiffVsStandard =
+    refiWithExtraAfter.totalPaid - standard.totalPaid;
+  const durationDiffNoExtraVsStandard =
+    refiNoExtraAfter.durationMonths - standard.durationMonths;
+  const durationDiffWithExtraVsStandard =
+    refiWithExtraAfter.durationMonths - standard.durationMonths;
 
   // Check if refi rate is better
   const refiRateBetter = inputs.refiRate < inputs.interestRate;
@@ -344,6 +355,126 @@ function ScenarioSummary({
           </>
         )}
       </p>
+
+      <button
+        className="show-more-btn"
+        onClick={() => setExpanded(!expanded)}
+        style={{ marginTop: "1rem" }}
+      >
+        {expanded ? "Show less" : "Show more"}
+      </button>
+
+      {expanded && (
+        <div
+          style={{
+            marginTop: "1rem",
+            paddingTop: "1rem",
+            borderTop: "1px solid #333",
+          }}
+        >
+          <p style={{ marginBottom: "1rem", fontWeight: "600" }}>
+            Comparison against standard mortgage (Scenario 1):
+          </p>
+
+          {/* Scenario 3 vs Scenario 1 */}
+          <p>
+            <strong>
+              If you refinance after {inputs.refiAfterMonths} months
+            </strong>{" "}
+            to a {formatTerm(inputs.refiTermMonths)} term at {inputs.refiRate}%
+            and <strong>stop the extra payments</strong> (Scenario 3): Compared
+            to the standard mortgage, you{" "}
+            {refiNoExtraDiffVsStandard > 0 ? (
+              <>
+                pay about{" "}
+                <span
+                  className={getDiffColor(
+                    refiNoExtraDiffVsStandard,
+                    standard.totalInterest,
+                    true
+                  )}
+                >
+                  {formatCurrency(refiNoExtraDiffVsStandard)}
+                </span>{" "}
+                more total
+              </>
+            ) : (
+              <>
+                save about{" "}
+                <span
+                  className={getDiffColor(
+                    refiNoExtraDiffVsStandard,
+                    standard.totalInterest,
+                    true
+                  )}
+                >
+                  {formatCurrency(Math.abs(refiNoExtraDiffVsStandard))}
+                </span>{" "}
+                total
+              </>
+            )}{" "}
+            and take {formatDuration(Math.abs(durationDiffNoExtraVsStandard))}{" "}
+            {durationDiffNoExtraVsStandard > 0 ? "longer" : "less"} to pay off.
+          </p>
+
+          {/* Scenario 4 vs Scenario 1 */}
+          {isScenario4DifferentFrom3 && (
+            <p>
+              <strong>
+                If you refinance
+                {hasExtraAfterRefi
+                  ? ` and keep paying ${formatCurrency(
+                      inputs.extraPaymentAfterRefi
+                    )} extra per month`
+                  : ""}
+                {hasLumpSumAfterRefi
+                  ? hasExtraAfterRefi
+                    ? ` and pay a ${formatCurrency(
+                        inputs.lumpSumAfterRefi
+                      )} lump sum at refi`
+                    : ` and pay a ${formatCurrency(
+                        inputs.lumpSumAfterRefi
+                      )} lump sum at refi`
+                  : ""}
+              </strong>{" "}
+              (Scenario 4): Compared to the standard mortgage, you{" "}
+              {refiWithExtraDiffVsStandard > 0 ? (
+                <>
+                  pay about{" "}
+                  <span
+                    className={getDiffColor(
+                      refiWithExtraDiffVsStandard,
+                      standard.totalInterest,
+                      true
+                    )}
+                  >
+                    {formatCurrency(refiWithExtraDiffVsStandard)}
+                  </span>{" "}
+                  more total
+                </>
+              ) : (
+                <>
+                  save about{" "}
+                  <span
+                    className={getDiffColor(
+                      refiWithExtraDiffVsStandard,
+                      standard.totalInterest,
+                      true
+                    )}
+                  >
+                    {formatCurrency(Math.abs(refiWithExtraDiffVsStandard))}
+                  </span>{" "}
+                  total
+                </>
+              )}{" "}
+              and take{" "}
+              {formatDuration(Math.abs(durationDiffWithExtraVsStandard))}{" "}
+              {durationDiffWithExtraVsStandard > 0 ? "longer" : "less"} to pay
+              off.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
