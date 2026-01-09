@@ -8,6 +8,88 @@ import {
 } from "./utils/mortgageCalculator";
 import "./App.css";
 
+function ScenarioSummary({
+  scenarios,
+  inputs,
+}: {
+  scenarios: ScenarioResult[];
+  inputs: CalculatorInputs;
+}) {
+  const extraNoRefi = scenarios[1];
+  const refiNoExtraAfter = scenarios[2];
+  const refiWithExtraAfter = scenarios[3];
+
+  const years = Math.floor(inputs.loanTermMonths / 12);
+  const refiYears = Math.floor(inputs.refiTermMonths / 12);
+
+  return (
+    <div style={{ lineHeight: "1.6" }}>
+      <p>
+        If you have a {years}-year loan of {formatCurrency(inputs.loanAmount)}{" "}
+        at {inputs.interestRate}% and plan to pay{" "}
+        {formatCurrency(inputs.extraPayment)} extra each month, here's how
+        refinancing looks:
+      </p>
+
+      <p>
+        <strong>If you refinance after {inputs.refiAfterMonths} months</strong>{" "}
+        to a {refiYears}-year term at {inputs.refiRate}% and{" "}
+        <strong>stop the extra payments</strong> (Scenario 3): It will cost you{" "}
+        {formatCurrency(refiNoExtraAfter.totalPaid)} total, where you're paying{" "}
+        {formatCurrency(refiNoExtraAfter.totalInterest)} in interest. Your total
+        monthly payment drops to{" "}
+        {formatCurrency(refiNoExtraAfter.monthlyPayment)}, but you'll be paying
+        for {formatDuration(refiNoExtraAfter.durationMonths)} instead of{" "}
+        {formatDuration(extraNoRefi.durationMonths)}. Compared to staying
+        aggressive without refi, you'd pay about{" "}
+        {formatCurrency(refiNoExtraAfter.totalPaid - extraNoRefi.totalPaid)}{" "}
+        more total and take{" "}
+        {formatDuration(
+          refiNoExtraAfter.durationMonths - extraNoRefi.durationMonths
+        )}{" "}
+        longer to pay off.
+      </p>
+
+      <p>
+        <strong>
+          If you refinance and keep paying{" "}
+          {formatCurrency(inputs.extraPaymentAfterRefi)} extra per month
+        </strong>{" "}
+        (Scenario 4): It will cost you{" "}
+        {formatCurrency(refiWithExtraAfter.totalPaid)} total, where you're
+        paying {formatCurrency(refiWithExtraAfter.totalInterest)} in interest.
+        Your total monthly payment is{" "}
+        {formatCurrency(
+          refiWithExtraAfter.refiMonthlyPayment! + inputs.extraPaymentAfterRefi
+        )}{" "}
+        ({formatCurrency(refiWithExtraAfter.refiMonthlyPayment!)} P&I +{" "}
+        {formatCurrency(inputs.extraPaymentAfterRefi)} extra). Compared to
+        Scenario 2, you pay about{" "}
+        {formatCurrency(refiWithExtraAfter.totalPaid - extraNoRefi.totalPaid)}{" "}
+        more total and take{" "}
+        {formatDuration(
+          Math.abs(
+            refiWithExtraAfter.durationMonths - extraNoRefi.durationMonths
+          )
+        )}{" "}
+        {refiWithExtraAfter.durationMonths > extraNoRefi.durationMonths
+          ? "longer"
+          : "less"}{" "}
+        to pay off.
+      </p>
+
+      <p>
+        <strong>Bottom line:</strong> If you can keep paying extra after refi,
+        Scenario 4 gets you close to Scenario 2's total cost. If you want to
+        make total interest payment lower, consider taking refi with a shorter
+        term since it might also give you a better rate, but the key is keeping
+        those extra payments going after refi—stopping them costs significantly
+        more.
+      </p>
+    </div>
+  );
+}
+
 function ScenarioCard({
   scenario,
   index,
@@ -49,19 +131,40 @@ function ScenarioCard({
         {expanded && (
           <div className="expanded-details">
             {isRefiScenario ? (
-              <div className="stat">
-                <span className="stat-label">Monthly P&I after refi:</span>
-                <span className="stat-value">
-                  {formatCurrency(scenario.refiMonthlyPayment!)}
-                </span>
-              </div>
+              <>
+                <div className="stat">
+                  <span className="stat-label">Monthly P&I:</span>
+                  <span className="stat-value">
+                    {formatCurrency(scenario.refiMonthlyPayment!)}
+                  </span>
+                </div>
+                <div className="stat">
+                  <span className="stat-label">Total payment:</span>
+                  <span className="stat-value">
+                    {formatCurrency(
+                      scenario.refiMonthlyPayment! +
+                        (scenario.extraPaymentAfterRefi || 0)
+                    )}
+                  </span>
+                </div>
+              </>
             ) : (
-              <div className="stat">
-                <span className="stat-label">Monthly P&I:</span>
-                <span className="stat-value">
-                  {formatCurrency(scenario.monthlyPayment)}
-                </span>
-              </div>
+              <>
+                <div className="stat">
+                  <span className="stat-label">Monthly P&I:</span>
+                  <span className="stat-value">
+                    {formatCurrency(scenario.monthlyPayment)}
+                  </span>
+                </div>
+                <div className="stat">
+                  <span className="stat-label">Total payment:</span>
+                  <span className="stat-value">
+                    {formatCurrency(
+                      scenario.monthlyPayment + scenario.extraPayment
+                    )}
+                  </span>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -297,17 +400,8 @@ function App() {
         </div>
 
         <div className="savings-summary">
-          <h3>Potential Savings</h3>
-          <p>
-            Best scenario saves{" "}
-            <strong>
-              {formatCurrency(
-                scenarios[0].totalPaid -
-                  Math.min(...scenarios.map((s) => s.totalPaid))
-              )}
-            </strong>{" "}
-            compared to standard mortgage
-          </p>
+          <h3>Summary</h3>
+          <ScenarioSummary scenarios={scenarios} inputs={inputs} />
         </div>
       </div>
     </div>

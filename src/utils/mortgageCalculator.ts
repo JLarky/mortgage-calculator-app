@@ -20,7 +20,9 @@ export interface ScenarioResult {
   durationMonths: number;
   description: string;
   monthlyPayment: number;
+  extraPayment: number;
   refiMonthlyPayment?: number;
+  extraPaymentAfterRefi?: number;
 }
 
 // Calculate monthly payment for a mortgage (P&I only)
@@ -308,6 +310,7 @@ export function calculateAllScenarios(
       durationMonths: standard.durationMonths,
       description: `No extra payments, full ${loanTermMonths}-month term`,
       monthlyPayment: standard.monthlyPayment,
+      extraPayment: 0,
     },
     {
       name: `+${formatCurrency(
@@ -320,6 +323,7 @@ export function calculateAllScenarios(
         extraPayment
       )} towards principal each month`,
       monthlyPayment: extraNoRefi.monthlyPayment,
+      extraPayment: extraPayment,
     },
     {
       name: `+${formatCurrency(
@@ -330,7 +334,9 @@ export function calculateAllScenarios(
       durationMonths: refiNoExtraAfter.durationMonths,
       description: `Extra payments for ${refiAfterMonths} months, then refi to ${refiTermMonths}m at ${refiRate}%`,
       monthlyPayment: refiNoExtraAfter.monthlyPayment,
+      extraPayment: extraPayment,
       refiMonthlyPayment: refiNoExtraAfter.refiMonthlyPayment,
+      extraPaymentAfterRefi: 0,
     },
     {
       name: `+${formatCurrency(
@@ -343,7 +349,9 @@ export function calculateAllScenarios(
       durationMonths: refiWithExtraAfter.durationMonths,
       description: `Extra payments continue after refinance`,
       monthlyPayment: refiWithExtraAfter.monthlyPayment,
+      extraPayment: extraPayment,
       refiMonthlyPayment: refiWithExtraAfter.refiMonthlyPayment,
+      extraPaymentAfterRefi: extraPaymentAfterRefi,
     },
   ];
 }
