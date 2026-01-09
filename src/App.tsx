@@ -152,7 +152,7 @@ function ScenarioSummary({
           (Scenario 3): It will cost you{" "}
           {formatCurrency(refiNoExtraAfter.totalPaid)} total, where you're
           paying {formatCurrency(refiNoExtraAfter.totalInterest)} in interest.
-          Your monthly payment is{" "}
+          Your monthly payment after refinancing is{" "}
           {formatCurrency(refiNoExtraAfter.monthlyPayment)}, and you'll be
           paying for {formatDuration(refiNoExtraAfter.durationMonths)}.
           {!hasExtraPayments && (
@@ -205,7 +205,7 @@ function ScenarioSummary({
           {hasExtraAfterRefi ? (
             <>
               {" "}
-              Your total monthly payment is{" "}
+              Your total monthly payment after refinancing is{" "}
               {formatCurrency(
                 refiWithExtraAfter.refiMonthlyPayment! +
                   inputs.extraPaymentAfterRefi
@@ -216,7 +216,7 @@ function ScenarioSummary({
           ) : (
             <>
               {" "}
-              Your monthly payment is{" "}
+              Your monthly payment after refinancing is{" "}
               {formatCurrency(refiWithExtraAfter.refiMonthlyPayment!)}.
             </>
           )}
