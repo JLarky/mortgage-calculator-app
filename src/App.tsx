@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   calculateAllScenarios,
+  calculateMonthlyPayment,
   formatCurrency,
   formatDuration,
   type CalculatorInputs,
@@ -27,7 +28,14 @@ function ScenarioSummary({
   const bestIndex = scenarios.findIndex((s) => s === bestScenario);
 
   const years = Math.floor(inputs.loanTermMonths / 12);
-  const refiYears = Math.floor(inputs.refiTermMonths / 12);
+
+  // Format term - use months if it doesn't divide evenly by 12
+  const formatTerm = (months: number) => {
+    if (months % 12 === 0) {
+      return `${months / 12}-year`;
+    }
+    return `${months}-month`;
+  };
 
   // Calculate differences
   const refiNoExtraDiff = refiNoExtraAfter.totalPaid - extraNoRefi.totalPaid;
@@ -71,21 +79,35 @@ function ScenarioSummary({
     return isGood ? "summary-good" : "summary-bad";
   };
 
+  // Calculate initial monthly P&I payment
+  const initialMonthlyPayment = calculateMonthlyPayment(
+    inputs.loanAmount,
+    inputs.interestRate,
+    inputs.loanTermMonths
+  );
+  const totalMonthlyPayment = initialMonthlyPayment + inputs.extraPayment;
+  const hasLumpSumAtStart = inputs.lumpSumAtStart > 0;
+
   return (
     <div style={{ lineHeight: "1.6" }}>
-      {hasExtraPayments ? (
-        <p>
-          If you have a {years}-year loan of {formatCurrency(inputs.loanAmount)}{" "}
-          at {inputs.interestRate}% and plan to pay{" "}
-          {formatCurrency(inputs.extraPayment)} extra each month, here's how
-          refinancing looks:
-        </p>
-      ) : (
-        <p>
-          If you have a {years}-year loan of {formatCurrency(inputs.loanAmount)}{" "}
-          at {inputs.interestRate}%, here's how refinancing looks:
-        </p>
-      )}
+      <p>
+        If you have a {years}-year loan of {formatCurrency(inputs.loanAmount)}{" "}
+        at {inputs.interestRate}% and plan to pay{" "}
+        {hasExtraPayments ? (
+          <>
+            {formatCurrency(totalMonthlyPayment)} (
+            {formatCurrency(initialMonthlyPayment)} +{" "}
+            {formatCurrency(inputs.extraPayment)})
+          </>
+        ) : (
+          formatCurrency(initialMonthlyPayment)
+        )}{" "}
+        each month
+        {hasLumpSumAtStart ? (
+          <> with {formatCurrency(inputs.lumpSumAtStart)} lump sum payment</>
+        ) : null}
+        , here's how refinancing looks:
+      </p>
 
       {/* Scenario 3 Analysis */}
       {hasExtraPayments ? (
@@ -93,11 +115,11 @@ function ScenarioSummary({
           <strong>
             If you refinance after {inputs.refiAfterMonths} months
           </strong>{" "}
-          to a {refiYears}-year term at {inputs.refiRate}% and{" "}
-          <strong>stop the extra payments</strong> (Scenario 3): It will cost
-          you {formatCurrency(refiNoExtraAfter.totalPaid)} total, where you're
-          paying {formatCurrency(refiNoExtraAfter.totalInterest)} in interest.
-          Your total monthly payment drops to{" "}
+          to a {formatTerm(inputs.refiTermMonths)} term at {inputs.refiRate}%
+          and <strong>stop the extra payments</strong> (Scenario 3): It will
+          cost you {formatCurrency(refiNoExtraAfter.totalPaid)} total, where
+          you're paying {formatCurrency(refiNoExtraAfter.totalInterest)} in
+          interest. Your total monthly payment drops to{" "}
           {formatCurrency(refiNoExtraAfter.monthlyPayment)}, but you'll be
           paying for {formatDuration(refiNoExtraAfter.durationMonths)} instead
           of {formatDuration(extraNoRefi.durationMonths)}.
@@ -126,10 +148,11 @@ function ScenarioSummary({
           <strong>
             If you refinance after {inputs.refiAfterMonths} months
           </strong>{" "}
-          to a {refiYears}-year term at {inputs.refiRate}% (Scenario 3): It will
-          cost you {formatCurrency(refiNoExtraAfter.totalPaid)} total, where
-          you're paying {formatCurrency(refiNoExtraAfter.totalInterest)} in
-          interest. Your monthly payment is{" "}
+          to a {formatTerm(inputs.refiTermMonths)} term at {inputs.refiRate}%
+          (Scenario 3): It will cost you{" "}
+          {formatCurrency(refiNoExtraAfter.totalPaid)} total, where you're
+          paying {formatCurrency(refiNoExtraAfter.totalInterest)} in interest.
+          Your monthly payment is{" "}
           {formatCurrency(refiNoExtraAfter.monthlyPayment)}, and you'll be
           paying for {formatDuration(refiNoExtraAfter.durationMonths)}.
           {!hasExtraPayments && (
